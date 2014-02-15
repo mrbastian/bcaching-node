@@ -5,7 +5,7 @@ var nano =  require('nano')('http://localhost:5984'),
 module.exports.bind = function(app,base) {
 	base = base || '/detail';
 	app.get(base + '/:id', findById);
-	app.post(base, saveDetail);
+	app.post(base, saveDetailBatch);
 	app.put(base + '/:id', saveDetail);
 	app.delete(base + '/:id', deleteDetail);
 }
@@ -87,17 +87,17 @@ function saveGc(gc, callback) {
 
 			// merge logs
 			if(gc.logs) {
-				var logs = [];
+				var logs = gc.logs;
 
 				if(data && data.logs) {
 					var logsUpdated = false;
 					var newLogsLookup = _.indexBy(gc.logs, '_id');
-					logs = data.logs;
+					logs = data.logs.value;
 					for(var i=0; i<logs.length; i++) {
 						var oldLog = logs[i];
 						var newLog = newLogsLookup[oldLog._id]
-						if(newLog && !_isEqual(oldLog, newLog)) {
-							oldLog.splice(i, 1, newLog);
+						if(newLog && !_.isEqual(oldLog, newLog)) {
+							logs.splice(i, 1, newLog);
 							logsUpdated = true;
 						}
 						delete newLogsLookup[oldLog._id];
@@ -123,10 +123,11 @@ function saveGc(gc, callback) {
 					if(data.logs) {
 						doc._rev = data.logs._rev;
 					}
+					docs.push(doc)
 				}
 			}
 
-			var result = { status: 'ok', updates: docs.length };
+			var result = { _id: gc._id, status: 'ok', updates: docs.length };
 			if(docs.length == 0) {
 				callback(null, result);
 			} else {
@@ -181,24 +182,38 @@ function findById(req, res) {
 
 //curl -X PUT -H "Content-Type: application/json" http://localhost:8124/api/gcdetail/195010 -d @gc195010.data
 function saveDetail(req, res) {
-	/*var id = parseInt(req.params.id);
-	getDocsById(id, function(err, data) {
-		if(data && data.detail) {
-			if(!_.isEqual(data.detail.value, req.body)) {
-				// save new object
-				console.log('Objects not equal');
-				console.log(req.body);
-			} else {
-				console.log('Objects EQUAL. No change required');
-			}
-		}
-		res.json(req.body);
-		res.end();
-	});*/
 	saveGc(req.body, function(err, data) {
-		res.json(data);
+		if(err) {
+			res.json(err);
+		} else {
+			res.json(data);
+		}
 		res.end();
 	});
+}
+
+function saveDetailBatch(req, res) {
+	var results = [];
+	async.eachSeries(req.body.docs,
+		function(item, callback) {
+			saveGc(item, function(err, data) {
+				if(err) {
+					callback(err);
+				} else {
+					results.push(data);
+					callback();
+				}
+			});
+		},
+		function(err) {
+			if(err) {
+				res.json(err);
+			} else {
+				res.json(results);
+			}
+			res.end();
+		}
+	);
 }
 
 function deleteDetail(req, res) {
