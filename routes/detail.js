@@ -87,28 +87,35 @@ function saveGc(gc, callback) {
 
 			// merge logs
 			if(gc.logs) {
-				var logsUpdated = false;
-				var newLogsLookup = _.indexBy(gc.logs, '_id');
 				var logs = [];
+
 				if(data && data.logs) {
+					var logsUpdated = false;
+					var newLogsLookup = _.indexBy(gc.logs, '_id');
 					logs = data.logs;
-				}
-				for(var i=0; i<logs.length; i++) {
-					var oldLog = logs[i];
-					var newLog = newLogsLookup[oldLog._id]
-					if(newLog && !_isEqual(oldLog, newLog)) {
-						oldLog.splice(i, 1, newLog);
+					for(var i=0; i<logs.length; i++) {
+						var oldLog = logs[i];
+						var newLog = newLogsLookup[oldLog._id]
+						if(newLog && !_isEqual(oldLog, newLog)) {
+							oldLog.splice(i, 1, newLog);
+							logsUpdated = true;
+						}
+						delete newLogsLookup[oldLog._id];
+					};
+					for(var k in newLogsLookup) {
+						logs.push(newLogsLookup[k]);
 						logsUpdated = true;
 					}
-					delete newLogsLookup[oldLog._id];
-				};
-				for(var k in newLogsLookup) {
-					logs.push(newLogsLookup[k]);
-					logsUpdated = true;
+					
+					if(logsUpdated) {
+						_.sortBy(logs, function(o){ return o.date; });
+						logs.reverse();
+					} else {
+						logs = null;
+					}
 				}
-				if(logsUpdated) {
-					_.sortBy(logs, function(o){ return o.date; });
-					logs.reverse();
+				
+				if(logs) {
 					var doc = {
 						_id: data.basekey + '_logs',
 						value: logs
