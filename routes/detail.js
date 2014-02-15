@@ -62,7 +62,7 @@ function saveGc(gc, callback) {
 			var docs = [];
 
 			// update detail
-			if(!data || !data.detail || !_.isEqual(data.detail.value, gc.detail)) {
+			if(gc.detail && (!data || !data.detail || !_.isEqual(data.detail.value, gc.detail))) {
 				var doc = { 
 					_id: data.basekey + '_detail', 
 					value: gc.detail
@@ -74,7 +74,7 @@ function saveGc(gc, callback) {
 			}
 			
 			// update tbs
-			if(!data || !data.tbs || !_.isEqual(data.tbs.value, gc.travelbugs)) {
+			if(gc.travelbugs && (!data || !data.tbs || !_.isEqual(data.tbs.value, gc.travelbugs))) {
 				var doc = {
 					_id: data.basekey + '_tbs',
 					value: gc.travelbugs
@@ -86,42 +86,44 @@ function saveGc(gc, callback) {
 			}
 
 			// merge logs
-			var logsUpdated = false;
-			var newLogsLookup = _.indexBy(gc.logs, '_id');
-			var logs = [];
-			if(data && data.logs) {
-				logs = data.logs;
-			}
-			for(var i=0; i<logs.length; i++) {
-				var oldLog = logs[i];
-				var newLog = newLogsLookup[oldLog._id]
-				if(newLog && !_isEqual(oldLog, newLog)) {
-					oldLog.splice(i, 1, newLog);
+			if(gc.logs) {
+				var logsUpdated = false;
+				var newLogsLookup = _.indexBy(gc.logs, '_id');
+				var logs = [];
+				if(data && data.logs) {
+					logs = data.logs;
+				}
+				for(var i=0; i<logs.length; i++) {
+					var oldLog = logs[i];
+					var newLog = newLogsLookup[oldLog._id]
+					if(newLog && !_isEqual(oldLog, newLog)) {
+						oldLog.splice(i, 1, newLog);
+						logsUpdated = true;
+					}
+					delete newLogsLookup[oldLog._id];
+				};
+				for(var k in newLogsLookup) {
+					logs.push(newLogsLookup[k]);
 					logsUpdated = true;
 				}
-				delete newLogsLookup[oldLog._id];
-			};
-			for(var k in newLogsLookup) {
-				logs.push(newLogsLookup[k]);
-				logsUpdated = true;
-			}
-			if(logsUpdated) {
-				_.sortBy(logs, function(o){ return o.date; });
-				logs.reverse();
-				var doc = {
-					_id: data.basekey + '_logs',
-					value: logs
-				};
-				if(data.logs) {
-					doc._rev = data.logs._rev;
+				if(logsUpdated) {
+					_.sortBy(logs, function(o){ return o.date; });
+					logs.reverse();
+					var doc = {
+						_id: data.basekey + '_logs',
+						value: logs
+					};
+					if(data.logs) {
+						doc._rev = data.logs._rev;
+					}
 				}
 			}
-			
+
 			var result = { status: 'ok', updates: docs.length };
 			if(docs.length == 0) {
 				callback(null, result);
 			} else {
-				console.log('updating doc', docs);
+				//console.log('updating docs', docs);
 				data.db.bulk({
 					docs: docs
 				},
