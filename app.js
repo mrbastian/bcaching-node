@@ -7,6 +7,7 @@ var application_root = __dirname,
 var app = express();
 
 app.configure(function () {
+	app.use(express.compress());
 	app.use(express.json({limit: '50mb'}));
 	app.use(express.methodOverride());
 	app.use(app.router);

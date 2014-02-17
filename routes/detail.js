@@ -260,13 +260,17 @@ function getGcById(id, callback) {
 		if(err) {
 			callback(err);
 		} else {
-			var gc = { detail: data.detail.value };
-			gc._id = gc.detail._id;
-			if(data.logs) {
-				gc.logs = data.logs.value;
-			}
-			if(data.tbs) {
-				gc.travelbugs = data.tbs.value;
+			var gc = { _id: id };
+			if(data) {
+				if(data.detail) {
+					gc.detail = data.detail.value;
+				}
+				if(data.logs) {
+					gc.logs = data.logs.value;
+				}
+				if(data.tbs) {
+					gc.travelbugs = data.tbs.value;
+				}
 			}
 			callback(null, gc);
 		}
