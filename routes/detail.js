@@ -159,7 +159,7 @@ function getGcUpdateDocs(data, gc) {
 			}
 			
 			if(logsUpdated) {
-				_.sortBy(logs, function(o){ return o.date; });
+				logs = _.sortBy(logs, function(o){ return o.date; });
 				logs.reverse();
 			} else {
 				logs = null;
